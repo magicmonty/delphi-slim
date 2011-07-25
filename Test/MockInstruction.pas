@@ -2,14 +2,16 @@ unit MockInstruction;
 
 interface
 
-uses Instruction, SlimDirective;
+uses Instruction, SlimDirective, SlimContext;
 
 type TMockInstruction = class(TInstruction)
   public
     Executed : Boolean;
     ExecutionResult : TSlimDirective;
-    function Execute: TSlimDirective; override;
-    constructor Create(result : string);
+    ContextUsed : TSlimContext;
+    function Execute(context : TSlimContext): TSlimDirective; override;
+    constructor Create; overload;
+    constructor Create(result : string); overload;
 end;
 
 implementation
@@ -21,10 +23,16 @@ begin
   ExecutionResult := TSlimStringDirective.Create(result);
 end;
 
-function TMockInstruction.Execute: TSlimDirective;
+constructor TMockInstruction.Create;
+begin
+  ExecutionResult := TSlimStringDirective.Create('');
+end;
+
+function TMockInstruction.Execute(context : TSlimContext): TSlimDirective;
 begin
   Executed := True;
   Result := ExecutionResult;
+  ContextUsed := context;
 end;
 
 end.

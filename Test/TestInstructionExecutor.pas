@@ -2,34 +2,50 @@ unit TestInstructionExecutor;
 
 interface
 
-uses TestFramework, InstructionExecutor;
+uses TestFramework, InstructionExecutor, MockInstruction;
 
 type TestTInstructionExecutor = class(TTestCase)
   published
     procedure TestExecution;
-
+    procedure TestExecutionWithContext;
+    procedure SetUp; override;
+  private
+    Executor : TInstructionExecutor;
+    MockInstruction : TMockInstruction;
 end;
 
 implementation
 
-uses SlimDirective, MockInstruction;
+uses SlimDirective, SlimContext;
 
 { TestTInstructionExecutor }
 
-procedure TestTInstructionExecutor.TestExecution;
-var executor : TInstructionExecutor;
-  mockInstruction : TMockInstruction;
-  result : TSlimDirective;
+procedure TestTInstructionExecutor.SetUp;
 begin
-  executor := TInstructionExecutor.Create;
+  inherited;
+  Executor := TInstructionExecutor.Create;
   mockInstruction := TMockInstruction.Create('ok');
-
-  result := executor.Execute(mockInstruction);
-
-  Check(mockInstruction.Executed, 'Instruction not executed');
-  CheckSame(mockInstruction.ExecutionResult, result);
 end;
 
+procedure TestTInstructionExecutor.TestExecution;
+var result : TSlimDirective;
+begin
+  result := Executor.Execute(MockInstruction, nil);
+
+  Check(mockInstruction.Executed, 'Instruction not executed');
+  CheckSame(MockInstruction.ExecutionResult, result);
+end;
+
+
+procedure TestTInstructionExecutor.TestExecutionWithContext;
+var context : TSlimContext;
+begin
+  context := TSlimContext.Create;
+
+  Executor.Execute(MockInstruction, context);
+
+  CheckSame(context, MockInstruction.ContextUsed);
+end;
 
 initialization
   RegisterTest(TestTInstructionExecutor.Suite);

@@ -3,11 +3,17 @@ unit InputProcessor;
 
 interface
 
-uses Classes, InstructionExecutor, InstructionParser;
+uses Classes, InstructionExecutor, InstructionParser, SlimContext;
 
 type TResponse = class
-  MustDisconnect : Boolean;
-  Output : string;
+  strict private
+    _MustDisconnect : Boolean;
+    _Output : string;
+  public
+    constructor Normal(output : string);
+    constructor Disconnection;
+    property MustDisconnect : Boolean read _MustDisconnect;
+    property Output : String read _Output;
 end;
 
 type TInputProcessor = class
@@ -15,7 +21,7 @@ type TInputProcessor = class
     InstructionExecutor : TInstructionExecutor;
     InstructionParser : TInstructionParser;
     constructor Create;
-    function Process(input : string) : TResponse; virtual;
+    function Process(input : string; context : TSlimContext) : TResponse; virtual;
 end;
 
 implementation
@@ -30,26 +36,36 @@ begin
   InstructionExecutor := TInstructionExecutor.Create;
 end;
 
-function TInputProcessor.Process(input: string): TResponse;
+function TInputProcessor.Process(input: string; context : TSlimContext): TResponse;
 var serializer : TSlimDirectiveSerializer;
   deserializer : TSlimDirectiveDeserializer;
   directiveResponse : TSlimDirective;
   instructionToExecute : TInstruction;
   directive : TSlimDirective;
 begin
-  Result := TResponse.Create;
-  Result.MustDisconnect := input = '000003:bye';
-  if Result.MustDisconnect then
-    Exit(Result);
+  if input = '000003:bye' then Exit(TResponse.Disconnection);
 
   serializer := TSlimDirectiveSerializer.Create;
   deserializer := TSlimDirectiveDeserializer.Create;
   directive := deserializer.Deserialize(input);
   instructionToExecute := InstructionParser.Parse(directive);
-  directiveResponse := InstructionExecutor.Execute(instructionToExecute);
+  directiveResponse := InstructionExecutor.Execute(instructionToExecute, context);
 
-  Result.Output := serializer.Serialize(directiveResponse);
+  Result := TResponse.Normal(serializer.Serialize(directiveResponse));
 end;
 
+
+{ TResponse }
+
+constructor TResponse.Disconnection;
+begin
+  Self._MustDisconnect := True;
+end;
+
+constructor TResponse.Normal(output: string);
+begin
+  Self._Output := output;
+  Self._MustDisconnect := False;
+end;
 
 end.

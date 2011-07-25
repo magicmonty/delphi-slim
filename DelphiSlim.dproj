@@ -59,6 +59,7 @@
 			<DCCReference Include="SlimDirectiveSerializer.pas"/>
 			<DCCReference Include="Logger.pas"/>
 			<DCCReference Include="Fixtures.pas"/>
+			<DCCReference Include="SlimContext.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>

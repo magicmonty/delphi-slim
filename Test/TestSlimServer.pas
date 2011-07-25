@@ -3,107 +3,86 @@ unit TestSlimServer;
 interface
 
 uses
-  TestFramework, SlimServer, IdTCPClient;
+  TestFramework, SlimServer, IdTCPClient, InputProcessor, SlimContext;
 
-type
-  TestTSlimServer = class(TTestCase)
-    strict private
-      FSlimServer : TSlimServer;
-    private
-      function CreateClient(port : Integer) : TIdTCPClient;
-    protected
-      procedure SetUp; override;
-      procedure TearDown; override;
-
-    published
-      procedure TestCanConnect;
-      // ignoré car trop long
-      //procedure TestCanStop;
-      procedure TestWillReceiveVersionOnConnect;
-      procedure TestBye;
-      procedure TestCommandProcessed;
-      procedure TestSeveralCommands;
-  end;
-
-implementation
-
-uses
-  Windows, SysUtils, IdExceptionCore, IdStack, IdException, InputProcessor;
+const SLEEP_TIME = 5;
 
 type TMockInputProcessor = class(TInputProcessor)
   public
     ProcessedInput : string;
     ProcessResult : TResponse;
+    ContextUsed : TSlimContext;
     constructor Create;
-    function Process(input: string) : TResponse; override;
+    function Process(input: string; context : TSlimContext) : TResponse; override;
 end;
 
+type TestTSlimServer = class(TTestCase)
+  published
+    procedure TestWillReceiveVersionOnConnect;
+    procedure TestBye;
+    procedure TestCommandProcessed;
+    procedure TestSeveralCommands;
+    procedure TestAContextIsUsed;
+    procedure TestTheSameContextIsUsedForEachInput;
+    procedure TestPackagePathsAreGivenToContext;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  strict private
+    FSlimServer : TSlimServer;
+    Client : TIdTCPClient;
+    MockInputProcessor : TMockInputProcessor;
+    WelcomeLineRead : string;
+    function CreateClient(port : Integer) : TIdTCPClient;
+    procedure WriteToServer(msg : string);
+end;
+
+implementation
+
+uses
+  Windows, SysUtils, IdExceptionCore, IdStack, IdException, Logger;
 
 procedure TestTSlimServer.SetUp;
 begin
-  FSlimServer := TSlimServer.Create(5555);
+  doLog := False;
 
+  FSlimServer := TSlimServer.Create(5555, 'packagePath1;packagePath2');
+  MockInputProcessor := TMockInputProcessor.Create;
+  FSlimServer.InputProcessor := MockInputProcessor;
   FSlimServer.Start;
-end;
 
+  Client := CreateClient(5555);
+  Client.Connect;
+
+  WelcomeLineRead := client.IOHandler.ReadLn();
+end;
 
 
 procedure TestTSlimServer.TearDown;
 begin
+  MockInputProcessor.Free;
+  MockInputProcessor := nil;
+  Client.Disconnect;
+  Client.Free;
+  Client := nil;
   FSlimServer.Stop;
 end;
 
-
-
-procedure TestTSlimServer.TestCanConnect;
-begin
-  CreateClient(5555).Connect;
-end;
-
-
-
-
-//procedure TestTSlimServer.TestCanStop;
-//var
-//  anotherServer : TSlimServer;
-//begin
-//  anotherServer := TSlimServer.Create(5556);
-//  anotherServer.Start;
-//
-//  anotherServer.Stop;
-//
-//  try
-//    CreateClient(5556).Connect;
-//    Fail('J''attendais un timeout ');
-//  except
-//    on EIdConnectTimeout do;
-//  end;
-//end;
-
-
-
-
 procedure TestTSlimServer.TestWillReceiveVersionOnConnect;
-var client : TIdTCPClient;
 begin
-  client := CreateClient(5555);
-  client.Connect;
-
-  CheckEquals('Slim -- V0.3', client.IOHandler.ReadLn());
+  CheckEquals('Slim -- V0.3', WelcomeLineRead);
 end;
+
 
 
 procedure TestTSlimServer.TestBye;
-var client : TIdTCPClient;
 begin
-  client := CreateClient(5555);
-  client.Connect;
-  client.IOHandler.ReadLn();
+  MockInputProcessor.ProcessResult := TResponse.Disconnection;
 
-  client.IOHandler.Write('000003:bye');
+  Client.IOHandler.Write('000003:bye');
 
   try
-    client.IOHandler.ReadLn();
+    Client.IOHandler.ReadLn();
     Fail('Connection should be closed');
   except on    EIdConnClosedGracefully do;
   end;
@@ -111,46 +90,51 @@ end;
 
 
 procedure TestTSlimServer.TestCommandProcessed;
-var client : TIdTCPClient;
-  mockInputProcessor : TMockInputProcessor;
 begin
-  mockInputProcessor := TMockInputProcessor.Create;
-  FSlimServer.InputProcessor := mockInputProcessor;
-  client := CreateClient(5555);
-  client.Connect;
-  client.IOHandler.ReadLn();
+  WriteToServer('000005:hello');
 
-  client.IOHandler.Write('000005:hello');
-
-  Sleep(100);
-  CheckEquals('000005:hello', mockInputProcessor.ProcessedInput);
-  mockInputProcessor.Free;
+  CheckEquals('000005:hello', MockInputProcessor.ProcessedInput);
 end;
 
 procedure TestTSlimServer.TestSeveralCommands;
-var client : TIdTCPClient;
-  mockInputProcessor : TMockInputProcessor;
-  mySecondResponse : TResponse;
-  tmp : string;
 begin
-  mockInputProcessor := TMockInputProcessor.Create;
-  FSlimServer.InputProcessor := mockInputProcessor;
-  client := CreateClient(5555);
-  client.Connect;
-  client.IOHandler.ReadLn();
-  client.IOHandler.Write('000005:hello');
-  Sleep(100);
-  mySecondResponse := TResponse.Create;
-  mySecondResponse.Output := 'second response';
-  mockInputProcessor.ProcessResult := mySecondResponse;
+  WriteToServer('000005:hello');
+  MockInputProcessor.ProcessResult := TResponse.Normal('second response');
 
-  client.IOHandler.Write('000006:second');
+  WriteToServer('000006:second');
 
-  Sleep(100);
-  tmp := client.IOHandler.ReadString(15);
-  CheckEquals('second response', tmp);
-  Sleep(100);
-  mockInputProcessor.Free;
+  CheckEquals('second response', client.IOHandler.ReadString(15));
+end;
+
+procedure TestTSlimServer.TestAContextIsUsed;
+begin
+  WriteToServer('000005:hello');
+
+  CheckNotNull(MockInputProcessor.ContextUsed);
+end;
+
+procedure TestTSlimServer.TestTheSameContextIsUsedForEachInput;
+var contextUsedForFirstInput : TSlimContext;
+begin
+  WriteToServer('000005:hello');
+  contextUsedForFirstInput := MockInputProcessor.ContextUsed;
+
+  WriteToServer('000005:there');
+
+  CheckSame(MockInputProcessor.ContextUsed, contextUsedForFirstInput);
+end;
+
+procedure TestTSlimServer.TestPackagePathsAreGivenToContext;
+var context : TSlimContext;
+begin
+  WriteToServer('000005:hello');
+
+  context := MockInputProcessor.ContextUsed;
+
+  CheckNotNull(context.PackagePaths);
+  CheckEquals(2, context.PackagePaths.Count);
+  CheckEquals('packagePath1', context.PackagePaths[0]);
+  CheckEquals('packagePath2', context.PackagePaths[1]);
 end;
 
 function TestTSlimServer.CreateClient(port : Integer) : TIdTCPClient;
@@ -158,8 +142,13 @@ begin
   Result := TIdTCPClient.Create(nil);
   Result.port := port;
   Result.Host := '127.0.0.1';
-  Result.ConnectTimeout := 100;
-  Result.ReadTimeout := 200;
+  Result.ReadTimeout := 50;
+end;
+
+procedure TestTSlimServer.WriteToServer(msg: string);
+begin
+  Client.IOHandler.Write(msg);
+  Sleep(SLEEP_TIME);
 end;
 
 { TMockInputProcessor }
@@ -169,10 +158,11 @@ begin
   ProcessResult := TResponse.Create;
 end;
 
-function TMockInputProcessor.Process(input: string) : TResponse;
+function TMockInputProcessor.Process(input: string; context : TSlimContext) : TResponse;
 begin
   ProcessedInput := input;
   Result := ProcessResult;
+  ContextUsed := context;
 end;
 
 initialization

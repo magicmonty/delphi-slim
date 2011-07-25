@@ -2,14 +2,15 @@ unit TestInputProcessor;
 
 interface
 
-uses TestFramework, InputProcessor, SlimDirective, InstructionExecutor, Instruction, InstructionParser;
+uses TestFramework, InputProcessor, SlimDirective, InstructionExecutor, Instruction, InstructionParser, SlimContext;
 
 type TMockInstructionExecutor = class(TInstructionExecutor)
   public
     Response : TSlimDirective;
     LastInstruction : TInstruction;
+    LastContextUsed : TSlimContext;
     constructor Create;
-    function Execute(instruction : TInstruction): TSlimDirective; override;
+    function Execute(instruction : TInstruction; context : TSlimContext): TSlimDirective; override;
 end;
 
 type TMockInstructionParser = class(TInstructionParser)
@@ -25,6 +26,7 @@ type
       procedure TestBye;
       procedure TestDontDisconnectOnOtherInputs;
       procedure TestInputIsWellProcessed;
+      procedure TestContextIsGivenToInstructionExecutor;
     protected
       procedure SetUp; override;
     private
@@ -50,7 +52,7 @@ procedure TestTInputProcessor.TestBye;
 var
   response : TResponse;
 begin
-  response := processor.Process('000003:bye');
+  response := processor.Process('000003:bye', nil);
 
   CheckNotNull(response, 'I need a response');
   Check(response.MustDisconnect, 'The client must be disconnected');
@@ -58,11 +60,12 @@ begin
   CheckNull(MockInstructionExecutor.LastInstruction);
 end;
 
+
 procedure TestTInputProcessor.TestDontDisconnectOnOtherInputs;
 var
   response : TResponse;
 begin
-  response := processor.Process('hello');
+  response := processor.Process('hello', nil);
 
   CheckFalse(response.MustDisconnect, 'The client must not be disconnected');
 end;
@@ -76,11 +79,21 @@ begin
   instruction := TInstruction.Create;
   mockInstructionParser.InstructionToReturn := instruction;
 
-  response := Processor.Process('000005:hello');
+  response := Processor.Process('000005:hello', nil);
 
   CheckEquals('000002:OK', response.Output);
   CheckSame(instruction, MockInstructionExecutor.LastInstruction, 'The last instruction wasn''t correct');
   CheckEquals('hello', mockInstructionParser.DirectiveParsed.Value);
+end;
+
+procedure TestTInputProcessor.TestContextIsGivenToInstructionExecutor;
+var context : TSlimContext;
+begin
+  context := TSlimContext.Create;
+
+  Processor.Process('000005:hello', context);
+
+  CheckSame(context, MockInstructionExecutor.LastContextUsed);
 end;
 
 { TMockInstructionExecutor }
@@ -90,9 +103,10 @@ begin
   Response := TSlimStringDirective.Create('any');
 end;
 
-function TMockInstructionExecutor.Execute(instruction : TInstruction): TSlimDirective;
+function TMockInstructionExecutor.Execute(instruction : TInstruction; context : TSlimContext): TSlimDirective;
 begin
   LastInstruction := instruction;
+  LastContextUsed := context;
   Result := Response;
 end;
 

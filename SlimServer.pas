@@ -3,82 +3,75 @@ unit SlimServer;
 interface
 
 uses
-  SysUtils, Classes, WinSock, Windows, IdTCPServer, IdContext, InputProcessor, Logger;
+  SysUtils, Classes, WinSock, Windows, IdTCPServer, IdContext, InputProcessor, SlimContext;
 
 type
   TSlimServer = class
-    private
-      FTCPServer : TIdTCPServer;
-      port : Integer;
-      procedure WriteToClient(AContext : TIdContext; msg : string; newLine : Boolean = False);
     public
       InputProcessor : TInputProcessor;
       Active : Boolean;
+      constructor Create(port : Integer; packagePaths : string);
       destructor Destroy; override;
-      procedure TCPServerConnect(AContext : TIdContext);
-      procedure TCPServerExecute(AContext : TIdContext);
-      constructor Create(port : Integer);
       procedure Start;
       procedure Stop;
+    strict private
+      TcpServer : TIdTCPServer;
+      Port : Integer;
+      SlimContext : TSlimContext;
+      procedure TcpServerConnect(AContext : TIdContext);
+      procedure TcpServerExecute(AContext : TIdContext);
+      procedure WriteToClient(AContext : TIdContext; msg : string; newLine : Boolean = False);
+      function ReadInput(AContext : TIdContext) : string;
   end;
 
 implementation
 
+uses Logger;
 
-
-constructor TSlimServer.Create(port : Integer);
+constructor TSlimServer.Create(port : Integer; packagePaths : string);
+var paths : TStrings;
 begin
-  Self.port := port;
+  Self.Port := port;
   InputProcessor := TInputProcessor.Create;
   Active := True;
+  SlimContext := TSlimContext.Create;
+
+  paths := TStringList.Create;
+  ExtractStrings([';'], [' '], PChar(packagePaths), paths);
+  SlimContext.AddPackagePath(paths[0]);
+  SlimContext.AddPackagePath(paths[1]);
 end;
-
-
 
 destructor TSlimServer.Destroy;
 begin
-  FTCPServer.Free;
+  TcpServer.Free;
   inherited Destroy;
 end;
 
-
-
 procedure TSlimServer.Start;
 begin
-  FTCPServer := TIdTCPServer.Create(nil);
-  FTCPServer.DefaultPort := port;
-  FTCPServer.OnConnect := TCPServerConnect;
-  FTCPServer.OnExecute := TCPServerExecute;
-  FTCPServer.Active := True;
+  TcpServer := TIdTCPServer.Create(nil);
+  TcpServer.DefaultPort := Port;
+  TcpServer.OnConnect := TcpServerConnect;
+  TcpServer.OnExecute := TcpServerExecute;
+  TcpServer.Active := True;
 end;
-
-
 
 procedure TSlimServer.Stop;
 begin
-  FTCPServer.Active := False;
+  TcpServer.Active := False;
 end;
 
-
-
-procedure TSlimServer.TCPServerConnect(AContext: TIdContext);
+procedure TSlimServer.TcpServerConnect(AContext: TIdContext);
 begin
   WriteToClient(AContext, 'Slim -- V0.3', True);
 end;
 
-procedure TSlimServer.TCPServerExecute(AContext : TIdContext);
+procedure TSlimServer.TcpServerExecute(AContext : TIdContext);
 var
-  lCmdLine : string;
-  lCmdLine2 : string;
-  size : Integer;
   response : TResponse;
 begin
-  lCmdLine := AContext.Connection.IOHandler.ReadString(6);
-  size := StrToInt(lCmdLine);
-  lCmdLine2 := AContext.Connection.IOHandler.ReadString(size + 1);
-  Log('--> ' + lCmdLine + lCmdLine2);
-
-  response := InputProcessor.Process(lCmdLine + lCmdLine2);
+  response := InputProcessor.Process(ReadInput(AContext), SlimContext);
 
   if response.MustDisconnect then
   begin
@@ -91,11 +84,23 @@ begin
   end;
 end;
 
+function TSlimServer.ReadInput(AContext : TIdContext): string;
+var
+  sizePart : string;
+  tailPart : string;
+  size : Integer;
+begin
+  sizePart := AContext.Connection.IOHandler.ReadString(6);
+  size := StrToInt(sizePart);
+  tailPart := AContext.Connection.IOHandler.ReadString(size + 1);
+  Result := sizePart + tailPart;
+  Log('<-- ' + Result);
+end;
 
 
 procedure TSlimServer.WriteToClient(AContext : TIdContext; msg : string; newLine : Boolean);
 begin
-    Log('<-- ' + msg);
+    Log('--> ' + msg);
     if  newLine then
       AContext.Connection.IOHandler.WriteLn(msg)
     else

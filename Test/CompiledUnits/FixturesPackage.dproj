@@ -1,12 +1,12 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
-			<ProjectGuid>{CA215D2E-CC47-44B1-B907-E71A1398BCD1}</ProjectGuid>
-			<MainSource>DelphiSlimTests.dpr</MainSource>
+			<ProjectGuid>{405C0FC5-C28D-42CA-BC6C-72E3DFB747E3}</ProjectGuid>
+			<MainSource>FixturesPackage.dpk</MainSource>
 			<ProjectVersion>12.3</ProjectVersion>
 			<Base>True</Base>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<Platform>Win32</Platform>
-			<AppType>Application</AppType>
+			<AppType>Package</AppType>
 			<FrameworkType>VCL</FrameworkType>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 		</PropertyGroup>
@@ -24,22 +24,20 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<UsePackages>true</UsePackages>
-			<DCC_UsePackage>vclimg;vcl;vclx;dbrtl;Rave90VCL;bdertl;VclSmp;rtl;svnui;svn;TeeUI;TeeDB;Tee;vclactnband;vcldb;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;inet;intrawebdb_110_150;Intraweb_110_150;vclie;inetdb;webdsnap;websnap;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DbxClientDriver;AzureCloud;DBXInterBaseDriver;DBXMySQLDriver;dbxcds;CodeSiteExpressVcl</DCC_UsePackage>
-			<DCC_UnitSearchPath>$(BDS)\Source\DUnit\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
-			<DCC_ExeOutput>.\$(Config)\$(Platform)</DCC_ExeOutput>
+			<GenPackage>true</GenPackage>
+			<DCC_DcuOutput>.\$(Config)\$(Platform)</DCC_DcuOutput>
+			<DCC_BplOutput>.</DCC_BplOutput>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_Define>CONSOLE_TESTRUNNER;$(DCC_Define)</DCC_Define>
-			<DCC_DcuOutput>.</DCC_DcuOutput>
+			<DCC_CBuilderOutput>All</DCC_CBuilderOutput>
 			<DCC_N>false</DCC_N>
 			<DCC_S>false</DCC_S>
-			<DCC_K>false</DCC_K>
+			<GenDll>true</GenDll>
 			<DCC_E>false</DCC_E>
 			<DCC_F>false</DCC_F>
+			<DCC_K>false</DCC_K>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
-			<BRCC_EnableMultiByte>true</BRCC_EnableMultiByte>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
@@ -51,29 +49,12 @@
 			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="DelphiSlimTests.dpr">
+			<DelphiCompile Include="FixturesPackage.dpk">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="TestSlimServer.pas"/>
-			<DCCReference Include="..\InputProcessor.pas"/>
-			<DCCReference Include="..\SlimServer.pas"/>
-			<DCCReference Include="TestInputProcessor.pas"/>
-			<DCCReference Include="TestSlimDirectiveDeserializer.pas"/>
-			<DCCReference Include="TestInstructionParser.pas"/>
-			<DCCReference Include="..\InstructionParser.pas"/>
-			<DCCReference Include="..\SlimDirective.pas"/>
-			<DCCReference Include="..\SlimDirectiveDeserializer.pas"/>
-			<DCCReference Include="..\Instruction.pas"/>
-			<DCCReference Include="TestInstruction.pas"/>
-			<DCCReference Include="..\InstructionExecutor.pas"/>
-			<DCCReference Include="TestSlimDirectiveSerializer.pas"/>
-			<DCCReference Include="..\SlimDirectiveSerializer.pas"/>
-			<DCCReference Include="..\Logger.pas"/>
-			<DCCReference Include="TestInstructionExecutor.pas"/>
-			<DCCReference Include="MockInstruction.pas"/>
-			<DCCReference Include="DummyFixtures.pas"/>
-			<DCCReference Include="TestRTTi.pas"/>
-			<DCCReference Include="..\SlimContext.pas"/>
+			<DCCReference Include="rtl.dcp"/>
+			<DCCReference Include="vcl.dcp"/>
+			<DCCReference Include="CompiledFixtures.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -90,11 +71,14 @@
 		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
-			<Borland.ProjectType/>
+			<Borland.ProjectType>Package</Borland.ProjectType>
 			<BorlandProject>
 				<Delphi.Personality>
+					<Source>
+						<Source Name="MainSource">FixturesPackage.dpk</Source>
+					</Source>
 					<VersionInfo>
-						<VersionInfo Name="IncludeVerInfo">False</VersionInfo>
+						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
 						<VersionInfo Name="MajorVer">1</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
@@ -120,23 +104,10 @@
 						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
-					<Source>
-						<Source Name="MainSource">DelphiSlimTests.dpr</Source>
-					</Source>
-					<Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k150.bpl">Composants Microsoft Office 2000 Sample Automation Server Wrapper</Excluded_Packages>
-						<Excluded_Packages Name="$(BDSBIN)\dclofficexp150.bpl">Composants Microsoft Office XP Sample Automation Server Wrapper</Excluded_Packages>
-					</Excluded_Packages>
 				</Delphi.Personality>
 				<Platforms>
 					<Platform value="Win32">True</Platform>
 				</Platforms>
-				<UnitTesting>
-					<TestFramework>DUnit / Delphi Win32</TestFramework>
-					<TestRunner>Console</TestRunner>
-					<SourceProjectName>C:\Users\fbezagu\Documents\RAD Studio\Projets\DelphiSlim\DelphiSlim.dproj</SourceProjectName>
-					<TestProjectName/>
-				</UnitTesting>
 			</BorlandProject>
 			<ProjectFileVersion>12</ProjectFileVersion>
 		</ProjectExtensions>
