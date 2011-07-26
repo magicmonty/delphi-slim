@@ -74,6 +74,8 @@
 			<DCCReference Include="DummyFixtures.pas"/>
 			<DCCReference Include="TestRTTi.pas"/>
 			<DCCReference Include="..\SlimContext.pas"/>
+			<DCCReference Include="..\SlimMethod.pas"/>
+			<DCCReference Include="TestSlimMethod.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>

@@ -49,13 +49,13 @@ function TInstructionParser.GetInstructionBuilder(directive : TSlimDirective): T
 begin
   if directive.GetItem(0) is TSlimStringDirective then
   begin
-    if directive.GetItem(1).Value = 'make' then
+    if directive.GetItemValue(1) = 'make' then
       Exit(TMakeInstructionBuilder.Create);
 
-    if directive.GetItem(1).Value = 'import' then
+    if directive.GetItemValue(1) = 'import' then
       Exit(TImportInstructionBuilder.Create);
 
-    if directive.GetItem(1).Value = 'call' then
+    if directive.GetItemValue(1) = 'call' then
       Exit(TCallInstructionBuilder.Create);
   end
   else begin
@@ -75,7 +75,7 @@ end;
 function TInstructionBuilder.Build(directive: TSlimDirective): TInstruction;
 begin
   Result := DoBuild(directive);
-  Result.Id := directive.GetItem(0).Value;
+  Result.Id := directive.GetItemValue(0);
 end;
 
 { TMakeInstructionBuilder }
@@ -85,8 +85,8 @@ var
   makeInstruction : TMakeInstruction;
 begin
   makeInstruction := TMakeInstruction.Create;
-  makeInstruction.InstanceName := directive.GetItem(2).Value;
-  makeInstruction.ClassToMake := directive.GetItem(3).Value;
+  makeInstruction.InstanceName := directive.GetItemValue(2);
+  makeInstruction.ClassToMake := directive.GetItemValue(3);
   Exit(makeInstruction);
 end;
 
@@ -96,19 +96,21 @@ function TImportInstructionBuilder.DoBuild(directive: TSlimDirective): TInstruct
 var  importInstruction : TImportInstruction;
 begin
   importInstruction := TImportInstruction.Create;
-  importInstruction.Path := directive.GetItem(2).Value;
+  importInstruction.Path := directive.GetItemValue(2);
   Exit(importInstruction);
 end;
 
 { TCallInstructionBuilder }
 
-function TCallInstructionBuilder.DoBuild(
-  directive: TSlimDirective): TInstruction;
+function TCallInstructionBuilder.DoBuild(directive: TSlimDirective): TInstruction;
 var callInstruction : TCallInstruction;
+  i : Integer;
 begin
   callInstruction := TCallInstruction.Create;
-  callInstruction.InstanceName := directive.GetItem(2).Value;
-  callInstruction.FunctionName := directive.GetItem(3).Value;
+  callInstruction.InstanceName := directive.GetItemValue(2);
+  callInstruction.FunctionName := directive.GetItemValue(3);
+  for i := 4 to directive.Length - 1 do
+    callInstruction.AddArgument(directive.GetItemValue(i));
   Exit(callInstruction);
 end;
 

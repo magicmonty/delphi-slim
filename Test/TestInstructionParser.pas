@@ -9,6 +9,7 @@ type TestTInstructionParser = class(TTestCase)
     procedure TestImportInstruction;
     procedure TestCallInstruction;
     procedure TestListOfInstructions;
+    procedure TestCallWithArguments;
   protected
     procedure SetUp; override;
   private
@@ -71,6 +72,21 @@ begin
   CheckEquals('id_call', Instruction.Id);
   CheckEquals('instance', (instruction as TCallInstruction).InstanceName);
   CheckEquals('function', (instruction as TCallInstruction).FunctionName);
+end;
+
+procedure TestTInstructionParser.TestCallWithArguments;
+var
+  directive : TSlimDirective;
+  instruction : TInstruction;
+  callInstruction : TCallInstruction;
+begin
+  directive := TSlimDirective.ListWith('id').Add('call').Add('inst').Add('fct').Add('arg1').Add('arg2');
+
+  instruction := Parser.Parse(directive);
+
+  callInstruction := instruction as TCallInstruction;
+  CheckNotNull(callInstruction.Arguments);
+  CheckEquals(2, callInstruction.Arguments.Count);
 end;
 
 procedure TestTInstructionParser.TestListOfInstructions;

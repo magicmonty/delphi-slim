@@ -1,15 +1,16 @@
 unit SlimDirectiveDeserializer;
 
 interface
-  uses SlimDirective;
 
-  type TSlimDirectiveDeserializer = class
-    public
-      function Deserialize(input : string) : TSlimDirective;
-    private
-      function ParseString(input : string) : TSlimDirective;
-      function ParseList(input : string) : TSlimDirective;
-  end;
+uses SlimDirective;
+
+type TSlimDirectiveDeserializer = class
+  public
+    function Deserialize(input : string) : TSlimDirective;
+  private
+    function ParseString(input : string) : TSlimDirective;
+    function ParseList(input : string) : TSlimDirective;
+end;
 
 implementation
 

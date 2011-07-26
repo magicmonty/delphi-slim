@@ -13,9 +13,8 @@ uses
   InstructionExecutor in 'InstructionExecutor.pas',
   SlimDirectiveSerializer in 'SlimDirectiveSerializer.pas',
   Logger in 'Logger.pas',
-  Fixtures in 'Fixtures.pas',
-  SlimContext in 'SlimContext.pas';
-
+  SlimContext in 'SlimContext.pas',
+  SlimMethod in 'SlimMethod.pas';
 
 var
   port  : Integer;

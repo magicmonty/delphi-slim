@@ -24,6 +24,8 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UsePackage>vclimg;vcl;vclx;dbrtl;Rave90VCL;bdertl;VclSmp;rtl;svnui;svn;TeeUI;TeeDB;Tee;vclactnband;vcldb;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;inet;intrawebdb_110_150;Intraweb_110_150;vclie;inetdb;webdsnap;websnap;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DbxClientDriver;AzureCloud;DBXInterBaseDriver;DBXMySQLDriver;dbxcds;CodeSiteExpressVcl</DCC_UsePackage>
+			<UsePackages>true</UsePackages>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_DcuOutput>.\$(Config)\$(Platform)</DCC_DcuOutput>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
@@ -58,8 +60,8 @@
 			<DCCReference Include="InstructionExecutor.pas"/>
 			<DCCReference Include="SlimDirectiveSerializer.pas"/>
 			<DCCReference Include="Logger.pas"/>
-			<DCCReference Include="Fixtures.pas"/>
 			<DCCReference Include="SlimContext.pas"/>
+			<DCCReference Include="SlimMethod.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
@@ -112,6 +114,10 @@
 					<Parameters>
 						<Parameters Name="RunParams">90</Parameters>
 					</Parameters>
+					<Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k150.bpl">Composants Microsoft Office 2000 Sample Automation Server Wrapper</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp150.bpl">Composants Microsoft Office XP Sample Automation Server Wrapper</Excluded_Packages>
+					</Excluded_Packages>
 				</Delphi.Personality>
 				<Platforms>
 					<Platform value="Win32">True</Platform>

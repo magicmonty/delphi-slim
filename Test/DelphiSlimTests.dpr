@@ -38,7 +38,9 @@ uses
   MockInstruction in 'MockInstruction.pas',
   DummyFixtures in 'DummyFixtures.pas',
   TestRTTi in 'TestRTTi.pas',
-  SlimContext in '..\SlimContext.pas';
+  SlimContext in '..\SlimContext.pas',
+  SlimMethod in '..\SlimMethod.pas',
+  TestSlimMethod in 'TestSlimMethod.pas';
 
 {R *.RES}
 

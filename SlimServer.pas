@@ -7,21 +7,24 @@ uses
 
 type
   TSlimServer = class
-    public
-      InputProcessor : TInputProcessor;
-      Active : Boolean;
-      constructor Create(port : Integer; packagePaths : string);
-      destructor Destroy; override;
-      procedure Start;
-      procedure Stop;
     strict private
-      TcpServer : TIdTCPServer;
-      Port : Integer;
-      SlimContext : TSlimContext;
+      _tcpServer : TIdTCPServer;
+      _port : Integer;
+      _slimContext : TSlimContext;
       procedure TcpServerConnect(AContext : TIdContext);
       procedure TcpServerExecute(AContext : TIdContext);
       procedure WriteToClient(AContext : TIdContext; msg : string; newLine : Boolean = False);
       function ReadInput(AContext : TIdContext) : string;
+      procedure AddPackagesPathsToContext(packagePaths : string);
+      procedure PackageLoaded;
+    public
+      InputProcessor : TInputProcessor;
+      Active : Boolean;
+      property SlimContext : TSlimContext read _slimContext;
+      constructor Create(port : Integer; packagePaths : string);
+      destructor Destroy; override;
+      procedure Start;
+      procedure Stop;
   end;
 
 implementation
@@ -29,37 +32,50 @@ implementation
 uses Logger;
 
 constructor TSlimServer.Create(port : Integer; packagePaths : string);
-var paths : TStrings;
 begin
-  Self.Port := port;
+  _port := port;
   InputProcessor := TInputProcessor.Create;
   Active := True;
-  SlimContext := TSlimContext.Create;
-
-  paths := TStringList.Create;
-  ExtractStrings([';'], [' '], PChar(packagePaths), paths);
-  SlimContext.AddPackagePath(paths[0]);
-  SlimContext.AddPackagePath(paths[1]);
+  PackageLoaded;
+  AddPackagesPathsToContext(packagePaths);
+  _slimContext.Init;
 end;
 
 destructor TSlimServer.Destroy;
 begin
-  TcpServer.Free;
+  _tcpServer.Free;
   inherited Destroy;
 end;
 
+
 procedure TSlimServer.Start;
 begin
-  TcpServer := TIdTCPServer.Create(nil);
-  TcpServer.DefaultPort := Port;
-  TcpServer.OnConnect := TcpServerConnect;
-  TcpServer.OnExecute := TcpServerExecute;
-  TcpServer.Active := True;
+  _tcpServer := TIdTCPServer.Create(nil);
+  _tcpServer.DefaultPort := _port;
+  _tcpServer.OnConnect := TcpServerConnect;
+  _tcpServer.OnExecute := TcpServerExecute;
+  _tcpServer.Active := True;
 end;
 
 procedure TSlimServer.Stop;
 begin
-  TcpServer.Active := False;
+  _tcpServer.Active := False;
+end;
+
+procedure TSlimServer.PackageLoaded;
+begin
+  _slimContext := TSlimContext.Create;
+end;
+
+procedure TSlimServer.AddPackagesPathsToContext(packagePaths : string);
+var
+  paths: TStrings;
+  i: Integer;
+begin
+  paths := TStringList.Create;
+  ExtractStrings([';'], [' '], PChar(packagePaths), paths);
+  for i := 0 to paths.Count - 1 do
+    _slimContext.AddPackagePath(paths[i]);
 end;
 
 procedure TSlimServer.TcpServerConnect(AContext: TIdContext);

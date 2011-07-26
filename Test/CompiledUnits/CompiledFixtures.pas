@@ -4,24 +4,9 @@ interface
 
 uses Classes, Dialogs;
 
-type TCompiledFixture = class(TPersistent)
-  published
-    procedure Hello;
-  public
-    toto : Integer;
+type TCompiledFixture = class
 end;
 
 implementation
 
-{ TCompiledFixture }
-
-procedure TCompiledFixture.Hello;
-begin
-
-end;
-
-initialization
-//  showMessage('registered');
-
-  RegisterClass(TCompiledFixture);
 end.

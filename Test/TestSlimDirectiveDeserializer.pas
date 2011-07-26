@@ -53,6 +53,7 @@ begin
 
   CheckEquals(1, directive.Length);
   CheckEquals('bonjour',directive.GetItem(0).Value);
+  CheckEquals('bonjour',directive.GetItemValue(0));
 end;
 
 procedure TestTSlimDirectiveDeserializer.TestDirectiveWithTwoStrings;
@@ -62,8 +63,8 @@ begin
   directive := Deserializer.Deserialize('000037:[000002:000005:Hello:000007:world !:]');
 
   CheckEquals(2, directive.Length);
-  CheckEquals('Hello',directive.GetItem(0).Value);
-  CheckEquals('world !',directive.GetItem(1).Value);
+  CheckEquals('Hello',directive.GetItemValue(0));
+  CheckEquals('world !',directive.GetItemValue(1));
 end;
 
 procedure TestTSlimDirectiveDeserializer.TestListInList;
@@ -74,11 +75,11 @@ begin
   directive := Deserializer.Deserialize('000068:[000002:000005:Hello:000041:[000002:000009:wonderful:000007:world !:]:]');
 
   CheckEquals(2, directive.Length);
-  CheckEquals('Hello',directive.GetItem(0).Value);
+  CheckEquals('Hello',directive.GetItemValue(0));
   sublist := directive.GetItem(1);
   CheckEquals(2, sublist.Length);
-  CheckEquals('wonderful',sublist.GetItem(0).Value);
-  CheckEquals('world !',sublist.GetItem(1).Value);
+  CheckEquals('wonderful',sublist.GetItemValue(0));
+  CheckEquals('world !',sublist.GetItemValue(1));
 end;
 
 initialization

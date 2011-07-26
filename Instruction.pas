@@ -2,9 +2,15 @@ unit Instruction;
 
 interface
 
-uses SlimDirective, SlimContext;
+uses SlimDirective, SlimContext, Rtti, Classes, SlimMethod;
 
 type TInstruction = class
+  strict private
+    _rttiContextInitialized : Boolean;
+    _rttiContext : TRttiContext;
+    _instructions : array of TInstruction;
+  protected
+    function RttiContext : TRttiContext;
   public
     Id : string;
     constructor Create; overload;
@@ -14,8 +20,6 @@ type TInstruction = class
     property Length : Integer read GetLength;
     function Execute(context : TSlimContext) : TSlimDirective; virtual;
     procedure Add(item : TInstruction);
-  private
-    instructions : array of TInstruction;
 end;
 
 type TListInstruction = class(TInstruction)
@@ -24,11 +28,15 @@ type TListInstruction = class(TInstruction)
 end;
 
 type TMakeInstruction = class(TInstruction)
+  strict private
+    function FindType(context : TSlimContext) : TRttiInstanceType;
+    function GetQualifiedNamesToTry(context : TSlimContext) : TStrings;
+    function CreateInstance(rttiType : TRttiInstanceType) : TObject;
   public
     InstanceName : string;
     ClassToMake : string;
     constructor Create; overload;
-    constructor Create(id, classToMake : string); overload;
+    constructor Create(id, classToMake, instanceName : string); overload;
     function Execute(context : TSlimContext): TSlimDirective; override;
 end;
 
@@ -41,22 +49,33 @@ type TImportInstruction = class(TInstruction)
 end;
 
 type TCallInstruction = class(TInstruction)
+  strict private
+    _arguments : TStrings;
+    _currentContext : TSlimContext;
+    function MethodToCall : TRttiMethod;
+    function InstanceType : TRttiType;
+    function Instance : TObject;
+    function SlimMethod : TSlimMethod;
   public
     InstanceName : string;
     FunctionName : string;
+    property Arguments : TStrings read _arguments;
+    constructor Create; overload;
+    constructor Create(id, instanceName, functionToCall : string); overload;
+    procedure AddArgument(argument : string);
     function Execute(context : TSlimContext): TSlimDirective; override;
 end;
 
 implementation
 
-uses Logger, Classes, Rtti;
+uses Logger, SysUtils;
 
 { TInstruction }
 
 procedure TInstruction.Add(item : TInstruction);
 begin
-  SetLength(instructions, GetLength() + 1);
-  instructions[GetLength() - 1] := item;
+  SetLength(_instructions, GetLength() + 1);
+  _instructions[GetLength() - 1] := item;
 end;
 
 constructor TInstruction.Create;
@@ -78,12 +97,19 @@ end;
 
 function TInstruction.GetItem(index: Integer): TInstruction;
 begin
-  Result := instructions[index];
+  Result := _instructions[index];
 end;
 
 function TInstruction.GetLength: Integer;
 begin
-  Result := System.Length(instructions);
+  Result := System.Length(_instructions);
+end;
+
+function TInstruction.RttiContext: TRttiContext;
+begin
+  if not _rttiContextInitialized then
+    _rttiContext := TRttiContext.Create;
+  Result := _rttiContext;
 end;
 
 { TMakeInstruction }
@@ -93,39 +119,60 @@ begin
 
 end;
 
-constructor TMakeInstruction.Create(id, classToMake: string);
+constructor TMakeInstruction.Create(id, classToMake, instanceName: string);
 begin
   inherited Create(id);
   Self.ClassToMake := classToMake;
+  Self.InstanceName := instanceName;
 end;
 
 function TMakeInstruction.Execute(context : TSlimContext): TSlimDirective;
-var typeFound : TRttiType;
-  importPath : string;
+var foundType : TRttiInstanceType;
 begin
   Result := inherited;
-  typeFound := TRttiContext.Create.FindType(ClassToMake);
-  if typeFound = nil then
-  begin
-    for importPath in context.ImportPaths do
-    begin
-      typeFound := TRttiContext.Create.FindType(importPath + '.' + ClassToMake);
-      if typeFound <> nil then
-        break;
-    end;
-  end;
-  if typeFound = nil then
+  foundType := FindType(context);
+  if foundType = nil then
     Result.Add('__EXCEPTION__:message:<<NO_CLASS ' + ClassToMake + '>>')
   else
   begin
     Result.Add('OK');
+    context.RegisterInstance(InstanceName, CreateInstance(foundType));
   end;
+end;
 
+function TMakeInstruction.CreateInstance(rttiType : TRttiInstanceType): TObject;
+var instance : TValue;
+begin
+  instance := rttiType.GetMethod('Create').Invoke(rttiType.MetaclassType, []);
+  Result := instance.AsObject;
+end;
+
+function TMakeInstruction.FindType(context : TSlimContext): TRttiInstanceType;
+var qualifiedName : string;
+begin
+  Result := nil;
+  for qualifiedName in GetQualifiedNamesToTry(context) do
+  begin
+    Result := RttiContext.FindType(qualifiedName) as TRttiInstanceType;
+    if Result <> nil then
+      break;
+  end;
+end;
+
+function TMakeInstruction.GetQualifiedNamesToTry(context: TSlimContext): TStrings;
+var importPath : string;
+begin
+  Result := TStringList.Create;
+  Result.Add(ClassToMake);
+  for importPath in context.ImportPaths do
+  begin
+    Result.Add(importPath + '.' + ClassToMake);
+  end;
 end;
 
 { TImportInstruction }
 
-constructor TImportInstruction.Create(id, path: string);
+constructor TImportInstruction.Create(id, path : string);
 begin
   inherited Create(id);
   Self.Path := path;
@@ -144,13 +191,55 @@ end;
 
 { TCallInstruction }
 
+constructor TCallInstruction.Create;
+begin
+  _arguments := TStringList.Create;
+end;
+
+constructor TCallInstruction.Create(id, instanceName, functionToCall: string);
+begin
+  inherited Create(id);
+  _arguments := TStringList.Create;
+  Self.FunctionName := functionToCall;
+  Self.InstanceName := instanceName;
+end;
+
+procedure TCallInstruction.AddArgument(argument: string);
+begin
+  Arguments.Add(argument);
+end;
+
 function TCallInstruction.Execute(context : TSlimContext): TSlimDirective;
 begin
-  inherited;
-  // NON TESTÉ
-  Result := TSlimDirective.Create;
-  Result.Add(Id);
-  Result.Add('/__VOID__/');
+  Result := inherited;
+  _currentContext := context;
+  Result.Add(SlimMethod.Call(Arguments));
+end;
+
+function TCallInstruction.SlimMethod: TSlimMethod;
+begin
+  if MethodToCall = nil then
+    Result := TNullSlimMethod.Create
+  else
+    Result := TSlimMethod.Create;
+
+  Result.FunctionName := FunctionName;
+  Result.Instance := Instance;
+end;
+
+function TCallInstruction.MethodToCall: TRttiMethod;
+begin
+  Result := InstanceType.GetMethod(FunctionName);
+end;
+
+function TCallInstruction.InstanceType: TRttiType;
+begin
+  Result := RttiContext.GetType(Instance.ClassType);
+end;
+
+function TCallInstruction.Instance: TObject;
+begin
+  Result := _currentContext.GetRegisteredInstance(InstanceName);
 end;
 
 { TListInstruction }

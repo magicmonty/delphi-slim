@@ -1,19 +1,18 @@
 unit InputProcessor;
 
-
 interface
 
 uses Classes, InstructionExecutor, InstructionParser, SlimContext;
 
 type TResponse = class
   strict private
-    _MustDisconnect : Boolean;
-    _Output : string;
+    _mustDisconnect : Boolean;
+    _output : string;
   public
     constructor Normal(output : string);
     constructor Disconnection;
-    property MustDisconnect : Boolean read _MustDisconnect;
-    property Output : String read _Output;
+    property MustDisconnect : Boolean read _mustDisconnect;
+    property Output : String read _output;
 end;
 
 type TInputProcessor = class
@@ -59,13 +58,13 @@ end;
 
 constructor TResponse.Disconnection;
 begin
-  Self._MustDisconnect := True;
+  Self._mustDisconnect := True;
 end;
 
 constructor TResponse.Normal(output: string);
 begin
-  Self._Output := output;
-  Self._MustDisconnect := False;
+  Self._output := output;
+  Self._mustDisconnect := False;
 end;
 
 end.

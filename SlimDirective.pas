@@ -3,22 +3,29 @@ unit SlimDirective;
 interface
 
 type TSlimDirective = class
+  private
+    _directives : array of TSlimDirective;
+  protected
+    function GetValue : string; virtual;
+    function GetLength : Integer; virtual;
   public
-    Value : string;
     constructor ListWith(directive : string);
     function GetItem(index : Integer) : TSlimDirective;
+    function GetItemValue(index : Integer) : string;
     function Add(directive : TSlimDirective): TSlimDirective; overload;
     function Add(directive: string): TSlimDirective; overload;
-    function GetLength : Integer; virtual;
     property Length : Integer read GetLength;
-  private
-    directives : array of TSlimDirective
+    property Value : string read GetValue;
 end;
 
 type TSlimStringDirective = class(TSlimDirective)
+  strict private
+    _value : string;
+  protected
+    function GetValue : string; override;
+    function GetLength: Integer; override;
   public
     constructor Create(value : string);
-    function GetLength: Integer; override;
 end;
 
 
@@ -28,8 +35,8 @@ implementation
 
 function TSlimDirective.Add(directive: TSlimDirective): TSlimDirective;
 begin
-  SetLength(directives, Length + 1);
-  directives[Length - 1] := directive;
+  SetLength(_directives, Length + 1);
+  _directives[Length - 1] := directive;
   Exit(Self);
 end;
 
@@ -41,12 +48,22 @@ end;
 
 function TSlimDirective.GetItem(index: Integer): TSlimDirective;
 begin
-  Result := directives[index];
+  Result := _directives[index];
+end;
+
+function TSlimDirective.GetItemValue(index: Integer): string;
+begin
+  Result := GetItem(index).Value;
 end;
 
 function TSlimDirective.GetLength: Integer;
 begin
-  Result := System.Length(directives);
+  Result := System.Length(_directives);
+end;
+
+function TSlimDirective.GetValue: string;
+begin
+  Result := '';
 end;
 
 constructor TSlimDirective.ListWith(directive : string);
@@ -58,12 +75,17 @@ end;
 
 constructor TSlimStringDirective.Create(value: string);
 begin
-  Self.Value := value;
+  _value := value;
 end;
 
 function TSlimStringDirective.GetLength: Integer;
 begin
   Result := 1;
+end;
+
+function TSlimStringDirective.GetValue: string;
+begin
+  Result := _value;
 end;
 
 end.

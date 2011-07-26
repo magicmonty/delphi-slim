@@ -25,6 +25,8 @@ type TestTSlimServer = class(TTestCase)
     procedure TestAContextIsUsed;
     procedure TestTheSameContextIsUsedForEachInput;
     procedure TestPackagePathsAreGivenToContext;
+    procedure TestPackagePathsAreGivenToContext2;
+    procedure TestPackagesAreLoaded;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -35,18 +37,21 @@ type TestTSlimServer = class(TTestCase)
     WelcomeLineRead : string;
     function CreateClient(port : Integer) : TIdTCPClient;
     procedure WriteToServer(msg : string);
+    function PackageIsLoaded(packageName : string) : Boolean;
 end;
 
 implementation
 
 uses
-  Windows, SysUtils, IdExceptionCore, IdStack, IdException, Logger;
+  Windows, SysUtils, IdExceptionCore, IdStack, IdException, Logger, Rtti;
+
+
 
 procedure TestTSlimServer.SetUp;
 begin
   doLog := False;
 
-  FSlimServer := TSlimServer.Create(5555, 'packagePath1;packagePath2');
+  FSlimServer := TSlimServer.Create(5555, '');
   MockInputProcessor := TMockInputProcessor.Create;
   FSlimServer.InputProcessor := MockInputProcessor;
   FSlimServer.Start;
@@ -125,16 +130,59 @@ begin
 end;
 
 procedure TestTSlimServer.TestPackagePathsAreGivenToContext;
-var context : TSlimContext;
+var anotherServer : TSlimServer;
+  context : TSlimContext;
 begin
-  WriteToServer('000005:hello');
+  anotherServer := TSlimServer.Create(1234, 'packagePath1;packagePath2');
 
-  context := MockInputProcessor.ContextUsed;
+  context := anotherServer.SlimContext;
 
   CheckNotNull(context.PackagePaths);
   CheckEquals(2, context.PackagePaths.Count);
   CheckEquals('packagePath1', context.PackagePaths[0]);
   CheckEquals('packagePath2', context.PackagePaths[1]);
+end;
+
+procedure TestTSlimServer.TestPackagePathsAreGivenToContext2;
+var anotherServer : TSlimServer;
+  context : TSlimContext;
+begin
+  anotherServer := TSlimServer.Create(1234, 'pac1;pac 2;pac 3');
+
+  context := anotherServer.SlimContext;
+
+  CheckNotNull(context.PackagePaths);
+  CheckEquals(3, context.PackagePaths.Count);
+  CheckEquals('pac1', context.PackagePaths[0]);
+  CheckEquals('pac 2', context.PackagePaths[1]);
+  CheckEquals('pac 3', context.PackagePaths[2]);
+end;
+
+procedure TestTSlimServer.TestPackagesAreLoaded;
+var
+  server : TSlimServer;
+begin
+  server := TSlimServer.Create(1234, '..\..\CompiledUnits\FixturesPackage.bpl');
+
+  Check(PackageIsLoaded('CompiledUnits\FixturesPackage.bpl'));
+
+  server.SlimContext.Free;
+end;
+
+function TestTSlimServer.PackageIsLoaded(packageName: string): Boolean;
+var
+  rttiContext : TRttiContext;
+  packages : TArray<TRttiPackage>;
+  i : Integer;
+begin
+  rttiContext := TRttiContext.Create;
+  packages := rttiContext.GetPackages();
+ for i := Low(packages) to High(packages) do
+  begin
+    if  Pos(packageName, packages[i].Name) > 0 then
+      Exit(True);
+  end;
+  Exit(False);
 end;
 
 function TestTSlimServer.CreateClient(port : Integer) : TIdTCPClient;
